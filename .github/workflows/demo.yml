@@ -11,6 +11,11 @@ jobs:
     steps:
       - name: Get code
         uses: actions/checkout@v4
+      - name: Cache dependencies # cache the installed dependencies to reduce workflow time
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: deps-node-modules-${{ hashFiles('**/package-lock.json') }}
       - name: Install dependencies
         run: npm ci
       - name: Test code
@@ -18,19 +23,24 @@ jobs:
   build:
     needs: test
     runs-on: ubuntu-latest
-    outputs:
+    outputs: # Job output
       script-file: ${{ steps.publish.outputs.script-file }}
     steps:
       - name: Get code
         uses: actions/checkout@v4
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: deps-node-modules-${{ hashFiles('**/package-lock.json') }}
       - name: Install dependencies
         run: npm ci
       - name: Build Website
         run: npm run build
-      - name: Publish JS filename
+      - name: Publish JS filename # Job output
         id: publish
         run: find build/static/js/*.js -type f -execdir echo '::set-output name=script-file::{}' ';'
-      - name: Upload artifacts
+      - name: Upload artifacts # Job upload artifacts
         uses: actions/upload-artifact@v3
         with:
           name: dist-files
@@ -41,13 +51,13 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Get build artifacts
+      - name: Get build artifacts # Job download artifacts
         uses: actions/download-artifact@v3
         with:
           name: dist-files
       - name: Output contents
         run: ls
-      - name: Output filename
+      - name: Output filename # Display Job output result
         run: echo "${{ needs.build.outputs.script-file }}"
       - name: Deploy
         run: echo "Deploying..."
